@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Century Command Centre</title>
+<style>
+:root{--g:#136C37;--y:#FDB913;--bg:#f6f7f4;--card:#fff;--tx:#1b2a20;--mut:#667;--bd:#e3e6df;--bad:#c0392b;--ok:#1e8449}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1712;--card:#17231b;--tx:#eaf1ec;--mut:#9fb0a5;--bd:#26372c}}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 Poppins,system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{background:var(--g);color:#fff;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+header b{font-size:18px}header b u{text-decoration-color:var(--y);text-decoration-thickness:3px}
+header small{opacity:.85;margin-left:auto}
+nav{display:flex;gap:4px;padding:8px 16px;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--bd)}
+nav button{border:0;background:none;padding:8px 12px;border-radius:8px;color:var(--tx);cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--g);color:#fff}
+main{padding:16px;max-width:1100px;margin:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+.kpi b{display:block;font-size:24px;color:var(--g)}.kpi span{color:var(--mut);font-size:12px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:top}
+th{color:var(--mut);font-weight:500;font-size:12px}
+input,textarea,select{width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+textarea{min-height:90px}label{font-size:12px;color:var(--mut)}
+button.b{background:var(--g);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer}
+button.s{background:none;border:1px solid var(--bd);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--tx)}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;background:var(--bd)}
+.tag.approved,.tag.published,.tag.auto_replied,.tag.won{background:#d5f0df;color:#0b5a2b}
+.tag.draft,.tag.rejected,.tag.lost{background:#f8d7d3;color:#8e2418}
+.tag.needs_md,.tag.needs_qa,.tag.needs_human{background:#fdecc0;color:#7a5600}
+.err{color:var(--bad)}.warn{color:#9a6b00}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.row{grid-template-columns:1fr}}
+#login{max-width:340px;margin:60px auto}
+</style></head><body>
+<header><b>Cent<u>ur</u>y®</b><span>Marketing Command Centre</span><small id="who"></small></header>
+<div id="login" class="card" hidden><h3>Sign in</h3><label>Team access token</label><input id="tok" type="password"><p><button class="b" onclick="signin()">Continue</button></p><p id="lerr" class="err"></p></div>
+<nav id="nav" hidden></nav><main id="main" hidden></main>
+<script>
+const TABS=['Overview','Content','Inbox','Leads','Calls','Site health','ROI & Growth'];
+let T=sessionStorage.getItem('tok')||'',tab=0,me={};
+const $=(t,a={},...k)=>{const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='on')for(const[ev,f]of Object.entries(v))e.addEventListener(ev,f);else if(x==='class')e.className=v;else e[x]=v}for(const c of k.flat())e.append(c instanceof Node?c:document.createTextNode(c??''));return e};
+async function api(p,o={}){const r=await fetch(p,{...o,headers:{'Content-Type':'application/json',Authorization:'Bearer '+T,...(o.headers||{})},body:o.body&&JSON.stringify(o.body)});if(r.status===401){logout();throw 0}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.detail||r.statusText);return j}
+function logout(){sessionStorage.removeItem('tok');T='';boot()}
+async function signin(){T=document.getElementById('tok').value.trim();try{await api('/api/me');sessionStorage.setItem('tok',T);boot()}catch(e){document.getElementById('lerr').textContent='Invalid token'}}
+const kpi=(v,l)=>$('div',{class:'card kpi'},$('b',{},v),$('span',{},l));
+const tag=s=>$('span',{class:'tag '+s},s);
+const table=(cols,rows,fn)=>$('table',{},$('tr',{},cols.map(c=>$('th',{},c))),rows.map(r=>$('tr',{},fn(r).map(c=>$('td',{},c)))));
+const inr=n=>n==null?'—':'₹'+Math.round(n).toLocaleString('en-IN');
+const when=t=>t?new Date(t*1000).toLocaleString('en-IN'):'';
+async function boot(){
+ const L=document.getElementById('login'),N=document.getElementById('nav'),M=document.getElementById('main');
+ if(!T){L.hidden=false;N.hidden=M.hidden=true;return}
+ try{me=await api('/api/me')}catch(e){return}
+ L.hidden=true;N.hidden=M.hidden=false;
+ document.getElementById('who').textContent=me.name+' · '+me.role;
+ N.replaceChildren(...TABS.map((t,i)=>$('button',{class:i===tab?'on':'',on:{click:()=>{tab=i;boot()}}},t)),$('button',{on:{click:logout}},'Sign out'));
+ const v=[overview,content,inbox,leads,calls,site,roi][tab];
+ M.replaceChildren(await v())}
+async function overview(){const o=await api('/api/overview'),r=o.roi,p=o.posts_by_status;
+ return $('div',{},
+  o.md_note?$('div',{class:'card warn'},o.md_note):'',
+  $('div',{class:'grid'},kpi(r.hours_saved+' h','Hours saved (30d)'),kpi(inr(r.money_saved_inr),'Value of time saved'),kpi(r.leads,'Leads (30d)'),kpi(r.won+' / '+inr(r.won_value_inr),'Won · value'),kpi(o.sla_breaches,'Reply SLA breaches'),kpi(o.open_leads,'Open leads')),
+  $('div',{class:'row'},
+   $('div',{class:'card'},$('h4',{},'Content pipeline'),table(['Status','Posts'],Object.entries(p),([s,n])=>[tag(s),n])),
+   $('div',{class:'card'},$('h4',{},'System'),$('p',{},'Sales open: '+(o.sales_open?'yes':'no — no Buy/Order CTAs allowed')),
+    $('p',{},'Meta: '+(o.live.meta?'live':'dry-run')+' · Sarvam: '+(o.live.sarvam?'live':'dry-run')+' · WhatsApp: '+(o.live.whatsapp?'live':'dry-run')))))}
+async function content(){const ps=await api('/api/posts');
+ const f={},fld=(k,l,el)=>{f[k]=el;return $('div',{},$('label',{},l),el)};
+ const form=$('div',{class:'card'},$('h4',{},'New post (auto-checked against brand rules)'),
+  fld('title','Title',$('input')),
+  $('div',{class:'row'},fld('hero','Product',$('select',{},['jaggery','soya','makhana','seasoning','poha','besan','pulses','brand'].map(x=>$('option',{},x)))),
+   fld('format','Format',$('select',{},['reel','carousel','static','story'].map(x=>$('option',{},x))))),
+  fld('caption','Caption',$('textarea')),fld('cta','CTA',$('input')),fld('hashtags','Hashtags',$('input',{value:'#Century #PureHomeFood #CenturySince1980'})),
+  $('label',{},$('input',{type:'checkbox',id:'paid',style:'width:auto'}),' Paid boost  '),$('label',{},$('input',{type:'checkbox',id:'creator',style:'width:auto'}),' Creator/gifted post'),
+  $('p',{},$('button',{class:'b',on:{click:async()=>{try{const hero=f.hero.value;const r=await api('/api/posts',{method:'POST',body:{title:f.title.value,hero,bucket:hero==='brand'?'brand':'product',format:f.format.value,caption:f.caption.value,cta:f.cta.value,hashtags:f.hashtags.value,is_paid:document.getElementById('paid').checked,is_creator:document.getElementById('creator').checked}});alert('Status: '+r.status+'\n'+[...r.check.errors,...r.check.warnings].join('\n'));boot()}catch(e){alert(e.message)}}}},'Check & submit')));
+ const act=(p,d)=>$('button',{class:'s',on:{click:async()=>{try{const r=await api(`/api/posts/${p.id}/review`,{method:'POST',body:{decision:d,note:d==='reject'?prompt('Reason?')||'':''}});if(r.warning)alert(r.warning);boot()}catch(e){alert(e.message)}}}},d);
+ const sched=p=>$('button',{class:'s',on:{click:async()=>{const s=prompt('Publish at (YYYY-MM-DD HH:MM, local time)');if(!s)return;try{await api(`/api/posts/${p.id}/schedule`,{method:'POST',body:{when:new Date(s.replace(' ','T')).getTime()/1000}});boot()}catch(e){alert(e.message)}}}},'schedule');
+ return $('div',{},form,$('div',{class:'card'},$('h4',{},'Posts & approvals'),table(['#','Post','Status','Issues','Actions'],ps,p=>{const c=JSON.parse(p.flags||'{}');
+  return[p.id,[$('b',{},p.title||p.hero),$('div',{},(p.caption||'').slice(0,120))],tag(p.status),[...(c.errors||[]).map(e=>$('div',{class:'err'},e)),...(c.warnings||[]).map(e=>$('div',{class:'warn'},e))],
+   [p.status==='needs_qa'&&['qa','md'].includes(me.role)||p.status==='needs_md'&&me.role==='md'?act(p,'approve'):'',['needs_qa','needs_md','draft'].includes(p.status)?act(p,'reject'):'',p.status==='approved'?sched(p):'']]})))}
+async function inbox(){const j=await api('/api/messages');
+ return $('div',{},j.sla_breaches.length?$('div',{class:'card err'},'SLA breaches: '+j.sla_breaches.map(m=>`#${m.id} (${m.overdue_h}h overdue)`).join(', ')):'',
+  $('div',{class:'card'},table(['When','Channel','From','Message','Category','Status','Reply'],j.messages,m=>[when(m.ts),m.channel,m.sender,m.body,m.category,tag(m.status),m.reply||(m.status.startsWith('escalated')||m.status==='needs_human'?$('button',{class:'s',on:{click:async()=>{const r=prompt('Your reply');if(r!=null){await api(`/api/messages/${m.id}/resolve?reply=`+encodeURIComponent(r),{method:'POST'});boot()}}}},'reply/resolve'):'')])))}
+async function leads(){const j=await api('/api/leads');
+ const mv=l=>$('select',{on:{change:async e=>{const v=e.target.value==='won'?parseFloat(prompt('Order value ₹')||'0'):null;await api(`/api/leads/${l.id}/move`,{method:'POST',body:{stage:e.target.value,value:v}});boot()}}},j.stages.map(s=>$('option',{selected:s===l.stage,value:s},s)));
+ return $('div',{class:'card'},table(['Score','Name','Phone','Source','Interest','Stage','Value'],j.leads,l=>[l.score,l.name,l.phone,l.source,l.interest,mv(l),inr(l.value)]))}
+async function calls(){const c=await api('/api/calls');return $('div',{class:'card'},$('p',{},'Calls handled by Sarvam voice AI; sensitive topics are escalated to a human.'),table(['When','Caller','Heard','Answered','Handled by'],c,x=>[when(x.ts),x.caller,x.transcript,x.answer,tag(x.handled_by)]))}
+async function site(){const s=await api('/api/site');
+ return $('div',{},$('p',{},$('button',{class:'b',on:{click:async()=>{await api('/api/site/check',{method:'POST'});boot()}}},'Check now')),
+  $('div',{class:'grid'},kpi(s.uptime_pct==null?'—':s.uptime_pct+'%','Uptime (recent checks)'),kpi(s.latest[0]?s.latest[0].ms+' ms':'—','Latest response'),kpi(s.latest[0]&&s.latest[0].ssl_days!=null?s.latest[0].ssl_days+' d':'—','SSL days left')),
+  $('div',{class:'card'},table(['When','URL','OK','Status','ms','Error'],s.history.slice(0,30),r=>[when(r.ts),r.url,r.ok?'✔':'✘',r.status,r.ms,r.error])))}
+async function roi(){const [r,g]=await Promise.all([api('/api/roi'),api('/api/growth')]);
+ return $('div',{},$('div',{class:'grid'},kpi(r.hours_saved+' h','Hours saved'),kpi(inr(r.money_saved_inr),'Money saved'),kpi(inr(r.won_value_inr),'Won lead value'),kpi(r.conversion_pct+'%','Lead → won'),kpi(inr(r.pipeline_inr),'Open pipeline')),
+  $('div',{class:'card'},$('h4',{},'Where the hours came from'),table(['Automation','Count','Hours'],r.breakdown,b=>[b.kind,b.count,b.hours]),
+   $('p',{class:'warn'},`Assumes ₹${r.assumptions.hourly_cost_inr}/h. ${r.assumptions.note}`)),
+  $('div',{class:'card'},$('h4',{},'Content performance (saves+shares per 1,000 reach)'),
+   table(['Post','Product','Reach','Saves','Shares','Link/WA clicks','S+S /1k'],g.posts,p=>[p.title,p.hero,p.reach,p.saves,p.shares,(p.link_clicks||0)+' / '+(p.wa_clicks||0),p.saves_shares_per_1k]),
+   $('p',{},'Boost only the top 20%: '+(g.boost_candidates.map(p=>p.title).join(', ')||'—'))))}
+boot();
+</script></body></html>
