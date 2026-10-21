@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
 
 from . import config, inbox, leads, roi, workflow
@@ -321,6 +321,27 @@ def roi_get(days: int = 30, _=Depends(user_dep)):
     return roi.summary(db, cfg, days)
 
 
+@app.get("/api/series")
+def series(days: int = 30, _=Depends(user_dep)):
+    """Daily series + funnel + content mix for the dashboard charts."""
+    since = time.time() - days * 86400
+    reach = {r["d"]: r for r in db.q(
+        "SELECT date(ts,'unixepoch','localtime') d, SUM(reach) reach, SUM(saves) saves, SUM(shares) shares "
+        "FROM post_metrics WHERE ts>=? GROUP BY d", (since,))}
+    hours = {r["d"]: r["n"] for r in db.q(
+        "SELECT date(ts,'unixepoch','localtime') d, COUNT(*) n FROM automation_events WHERE ts>=? GROUP BY d", (since,))}
+    out = []
+    for i in range(days):
+        d = time.strftime("%Y-%m-%d", time.localtime(since + (i + 1) * 86400))
+        r = reach.get(d, {})
+        out.append({"d": d, "reach": r.get("reach") or 0, "saves": r.get("saves") or 0,
+                    "shares": r.get("shares") or 0, "actions": hours.get(d, 0)})
+    funnel = {r["stage"]: r["n"] for r in db.q("SELECT stage, COUNT(*) n FROM leads GROUP BY stage")}
+    mix = {r["hero"] or "other": r["n"] for r in db.q(
+        "SELECT hero, COUNT(*) n FROM posts WHERE status IN ('approved','scheduled','published','published_dry_run') GROUP BY hero")}
+    return {"days": out, "funnel": funnel, "mix": mix}
+
+
 @app.get("/api/overview")
 def overview(_=Depends(user_dep)):
     counts = {r["status"]: r["n"] for r in db.q("SELECT status, COUNT(*) n FROM posts GROUP BY status")}
@@ -348,4 +369,6 @@ def healthz():
 
 @app.get("/")
 def index():
-    return FileResponse(STATIC / "index.html")
+    # index.html is a fragment (also published as an Artifact preview); add the document shell here.
+    shell = '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+    return HTMLResponse(shell + (STATIC / "index.html").read_text(encoding="utf-8"))

@@ -1,97 +1,513 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Century Command Centre</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
 <style>
-:root{--g:#136C37;--y:#FDB913;--bg:#f6f7f4;--card:#fff;--tx:#1b2a20;--mut:#667;--bd:#e3e6df;--bad:#c0392b;--ok:#1e8449}
-@media(prefers-color-scheme:dark){:root{--bg:#0f1712;--card:#17231b;--tx:#eaf1ec;--mut:#9fb0a5;--bd:#26372c}}
-*{box-sizing:border-box}body{margin:0;font:14px/1.45 Poppins,system-ui,sans-serif;background:var(--bg);color:var(--tx)}
-header{background:var(--g);color:#fff;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-header b{font-size:18px}header b u{text-decoration-color:var(--y);text-decoration-thickness:3px}
-header small{opacity:.85;margin-left:auto}
-nav{display:flex;gap:4px;padding:8px 16px;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--bd)}
-nav button{border:0;background:none;padding:8px 12px;border-radius:8px;color:var(--tx);cursor:pointer;white-space:nowrap}
-nav button.on{background:var(--g);color:#fff}
-main{padding:16px;max-width:1100px;margin:auto}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
-.kpi b{display:block;font-size:24px;color:var(--g)}.kpi span{color:var(--mut);font-size:12px}
-table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:top}
-th{color:var(--mut);font-weight:500;font-size:12px}
-input,textarea,select{width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
-textarea{min-height:90px}label{font-size:12px;color:var(--mut)}
-button.b{background:var(--g);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer}
-button.s{background:none;border:1px solid var(--bd);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--tx)}
-.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;background:var(--bd)}
-.tag.approved,.tag.published,.tag.auto_replied,.tag.won{background:#d5f0df;color:#0b5a2b}
-.tag.draft,.tag.rejected,.tag.lost{background:#f8d7d3;color:#8e2418}
-.tag.needs_md,.tag.needs_qa,.tag.needs_human{background:#fdecc0;color:#7a5600}
-.err{color:var(--bad)}.warn{color:#9a6b00}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:640px){.row{grid-template-columns:1fr}}
-#login{max-width:340px;margin:60px auto}
-</style></head><body>
-<header><b>Cent<u>ur</u>y®</b><span>Marketing Command Centre</span><small id="who"></small></header>
-<div id="login" class="card" hidden><h3>Sign in</h3><label>Team access token</label><input id="tok" type="password"><p><button class="b" onclick="signin()">Continue</button></p><p id="lerr" class="err"></p></div>
-<nav id="nav" hidden></nav><main id="main" hidden></main>
+/* Layout: sticky green brand bar, left rail (scrolling tabs on phone), main = headline numbers -> charts -> what needs attention.
+   Calendar = month grid with the Mon/Wed/Fri cadence slots + a day panel. Poppins is the brand fallback face and covers Hindi. */
+:root{
+  --bg:#f1f4ee; --surface:#ffffff; --ink:#13241a; --ink2:#4b5f53; --mute:#6f8176; --line:#dce4d9; --soft:#f6f8f4;
+  --g:#136C37; --y:#FDB913; --on-g:#ffffff;
+  --chart:#136C37; --chart-soft:rgba(19,108,55,.14);
+  --jag:#B8740A; --soya:#136C37; --mak:#3F6FA8; --rng:#6d7d73;
+  --ok-bg:#dcf1e3; --ok-fg:#0d5a2b; --wait-bg:#fdecc3; --wait-fg:#7a5200; --bad-bg:#f9dcd8; --bad-fg:#8e2418;
+  --info-bg:#dfe9f6; --info-fg:#27507f; --draft-bg:#e8ece6; --draft-fg:#4b5f53;
+  --shadow:0 1px 2px rgba(19,36,26,.06);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1610; --surface:#15221a; --ink:#e7f0ea; --ink2:#a6b8ad; --mute:#869a8d; --line:#25382c; --soft:#101b14;
+  --g:#1c8a49; --chart:#3aae69; --chart-soft:rgba(58,174,105,.18);
+  --jag:#CF8A18; --soya:#2E9E5B; --mak:#5B8FD0; --rng:#8fa296;
+  --ok-bg:#16402a; --ok-fg:#8fe0ae; --wait-bg:#4a3a10; --wait-fg:#f5cf70; --bad-bg:#4d1f1a; --bad-fg:#f5a79e;
+  --info-bg:#1c3350; --info-fg:#a9c8ef; --draft-bg:#223329; --draft-fg:#a6b8ad; --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1610; --surface:#15221a; --ink:#e7f0ea; --ink2:#a6b8ad; --mute:#869a8d; --line:#25382c; --soft:#101b14;
+  --g:#1c8a49; --chart:#3aae69; --chart-soft:rgba(58,174,105,.18);
+  --jag:#CF8A18; --soya:#2E9E5B; --mak:#5B8FD0; --rng:#8fa296;
+  --ok-bg:#16402a; --ok-fg:#8fe0ae; --wait-bg:#4a3a10; --wait-fg:#f5cf70; --bad-bg:#4d1f1a; --bad-fg:#f5a79e;
+  --info-bg:#1c3350; --info-fg:#a9c8ef; --draft-bg:#223329; --draft-fg:#a6b8ad; --shadow:none; color-scheme:dark}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--ink);font-family:Poppins,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--g);z-index:30}
+button,input,select,textarea{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--y);outline-offset:2px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--g);color:var(--on-g);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{font-weight:700;font-size:20px;letter-spacing:.2px}
+.logo u{text-decoration:underline;text-decoration-color:var(--y);text-decoration-thickness:3px;text-underline-offset:4px}
+.logo sup{font-size:10px;font-weight:500}
+.phase{font-size:12px;opacity:.92;display:flex;gap:8px;align-items:center;min-width:0}
+.phase b{background:var(--y);color:#1b1b1b;border-radius:99px;padding:1px 9px;font-weight:600}
+.who{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:12px;flex-wrap:wrap}
+.who select{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:4px 8px;color:#fff}
+.who select option{color:#13241a}
+.pill-demo{background:var(--y);color:#1b1b1b;border-radius:99px;padding:1px 10px;font-weight:600}
+.shell{display:grid;grid-template-columns:200px minmax(0,1fr);gap:20px;max-width:1280px;margin:0 auto;
+  padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+nav.rail{display:flex;flex-direction:column;gap:2px;position:sticky;top:calc(64px + env(safe-area-inset-top,0px));align-self:start}
+nav.rail button{display:flex;gap:10px;align-items:center;text-align:left;border:0;background:none;padding:9px 12px;border-radius:10px;color:var(--ink2);cursor:pointer}
+nav.rail button:hover{background:var(--soft)}
+nav.rail button.on{background:var(--surface);color:var(--g);font-weight:600;box-shadow:var(--shadow);outline:1px solid var(--line)}
+:root[data-theme="dark"] nav.rail button.on{color:var(--chart)}
+nav.rail svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav.rail .badge{margin-left:auto;background:var(--y);color:#1b1b1b;border-radius:99px;font-size:11px;font-weight:600;padding:0 7px}
+main{min-width:0}
+h2{font-size:20px;margin:0 0 4px;font-weight:600}
+.sub{color:var(--ink2);margin:0 0 16px}
+h3{font-size:13px;margin:0;font-weight:600;letter-spacing:.2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);min-width:0}
+.card>header{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.card>header small{color:var(--mute);font-size:12px}
+.grid{display:grid;gap:14px;margin-bottom:14px}
+.g-kpi{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.g-2{grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr))}
+.kpi .v{font-size:26px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi .l{color:var(--ink2);font-size:12px}
+.kpi .d{font-size:12px;color:var(--mute)}
+.pillx{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:1px 9px;font-size:11px;font-weight:600;white-space:nowrap}
+.s-approved,.s-published,.s-published_dry_run,.s-auto_replied,.s-won,.s-resolved{background:var(--ok-bg);color:var(--ok-fg)}
+.s-needs_md,.s-needs_qa,.s-needs_human,.s-escalated_qa,.s-escalated_md,.s-qualified,.s-contacted{background:var(--wait-bg);color:var(--wait-fg)}
+.s-draft,.s-rejected,.s-lost,.s-hidden,.s-new{background:var(--draft-bg);color:var(--draft-fg)}
+.s-rejected,.s-lost{background:var(--bad-bg);color:var(--bad-fg)}
+.s-scheduled,.s-sample_sent{background:var(--info-bg);color:var(--info-fg)}
+.pillx::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.s-scheduled::before{background:none;border:1.5px solid currentColor}
+.s-needs_md::before,.s-needs_qa::before{border-radius:1px;transform:rotate(45deg)}
+/* charts */
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.ax text{fill:var(--mute);font-size:11px;font-family:inherit}
+.grid-l{stroke:var(--line);stroke-width:1}
+.hb{display:grid;grid-template-columns:minmax(90px,150px) minmax(0,1fr) auto;gap:4px 10px;align-items:center;font-size:12.5px}
+.hb .t{color:var(--ink2);overflow-wrap:anywhere}
+.hb .tr{background:var(--soft);border-radius:4px;height:14px;overflow:hidden;outline:1px solid var(--line)}
+.hb .f{height:100%;border-radius:0 4px 4px 0;background:var(--chart);min-width:2px}
+.hb .vl{font-weight:600;font-variant-numeric:tabular-nums;text-align:right;min-width:3ch}
+.mixbar{display:flex;gap:2px;height:26px;position:relative;margin-top:6px}
+.mixbar>div{border-radius:4px;min-width:3px}
+.mixlab{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;font-size:12px;color:var(--ink2)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.tgt{position:absolute;top:-6px;bottom:-6px;width:0;border-left:2px dashed var(--ink)}
+.tgtl{font-size:11px;color:var(--mute);position:absolute;top:-22px;transform:translateX(-50%);white-space:nowrap}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:8px;font-size:12px;line-height:1.4;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:260px;display:none}
+/* attention list */
+.att{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.att li{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:10px;background:var(--soft);border:1px solid var(--line)}
+.att li button{margin-left:auto}
+.att .dot{width:8px;height:8px;border-radius:50%;margin-top:7px;flex:none;background:var(--y)}
+.att .dot.bad{background:#d44a3a}
+/* calendar */
+.calwrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px;align-items:start}
+.tools{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.tools h3{font-size:16px;min-width:150px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:5px 12px;cursor:pointer}
+.btn:hover{background:var(--soft)}
+.btn.pri{background:var(--g);color:#fff;border-color:var(--g)}
+.btn.sm{padding:2px 9px;font-size:12px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.legend{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin:0 0 10px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--line);gap:1px}
+.cal .dow{background:var(--soft);padding:6px 8px;font-size:11px;color:var(--mute);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.cell{background:var(--surface);min-height:104px;padding:5px 6px;display:flex;flex-direction:column;gap:3px;cursor:pointer;text-align:left;border:0;min-width:0;position:relative}
+.cell:hover{background:var(--soft)}
+.cell.out{background:var(--soft);color:var(--mute)}
+.cell.sel{outline:2px solid var(--g);outline-offset:-2px;z-index:1}
+.cell .dn{font-size:12px;font-weight:600;display:flex;gap:4px;align-items:center}
+.cell.today .dn span:first-child{background:var(--g);color:#fff;border-radius:99px;min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center}
+.cell .key{font-size:10px;font-weight:600;color:var(--wait-fg);background:var(--wait-bg);border-radius:4px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{display:flex;align-items:center;gap:4px;border-radius:5px;padding:1px 5px;font-size:11px;line-height:1.35;border-left:3px solid var(--c);background:var(--soft);min-width:0}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip i{font-style:normal;font-size:9.5px;font-weight:700;margin-left:auto;flex:none;padding:0 4px;border-radius:3px}
+.chip.st-needs_md,.chip.st-needs_qa{background:var(--wait-bg)}
+.chip.st-draft,.chip.st-rejected{background:var(--draft-bg);border-left-style:dashed}
+.chip.st-published,.chip.st-published_dry_run{background:var(--ok-bg)}
+.slot{font-size:10.5px;color:var(--mute);border:1px dashed var(--line);border-radius:5px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel h3{font-size:15px}
+.postcard{border:1px solid var(--line);border-left:4px solid var(--c);border-radius:10px;padding:10px;margin-top:10px;background:var(--soft)}
+.postcard p{margin:6px 0;color:var(--ink2);font-size:13px}
+.issues{margin:6px 0 0;padding:0;list-style:none;font-size:12px}
+.issues li.e{color:var(--bad-fg)} .issues li.w{color:var(--wait-fg)}
+.actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+input[type=text],input[type=number],input[type=datetime-local],select.f,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+textarea{min-height:92px;resize:vertical}
+label.l{display:block;font-size:12px;color:var(--ink2);margin-bottom:3px}
+.form{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.form .wide{grid-column:1/-1}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--mute);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;z-index:60;font-size:13px;max-width:90vw}
+.note{background:var(--wait-bg);color:var(--wait-fg);border-radius:10px;padding:8px 12px;margin-bottom:14px;font-size:13px}
+.login{max-width:360px;margin:60px auto}
+.muted{color:var(--mute)} .err{color:var(--bad-fg)}
+.funnel-n{font-weight:600}
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  nav.rail{flex-direction:row;overflow-x:auto;position:static;padding-bottom:4px}
+  nav.rail button{white-space:nowrap}
+  .calwrap{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:640px){
+  .cell{min-height:64px;padding:3px}
+  .chip span,.chip i,.slot,.cell .key{display:none}
+  .chip{height:7px;padding:0}
+  .cell .key{display:none}
+  .cal .dow{padding:4px 2px;font-size:10px;text-align:center}
+  .kpi .v{font-size:22px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="app"></div>
+<div id="tip" role="status"></div>
+
 <script>
-const TABS=['Overview','Content','Inbox','Leads','Calls','Site health','ROI & Growth'];
-let T=sessionStorage.getItem('tok')||'',tab=0,me={};
-const $=(t,a={},...k)=>{const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='on')for(const[ev,f]of Object.entries(v))e.addEventListener(ev,f);else if(x==='class')e.className=v;else e[x]=v}for(const c of k.flat())e.append(c instanceof Node?c:document.createTextNode(c??''));return e};
-async function api(p,o={}){const r=await fetch(p,{...o,headers:{'Content-Type':'application/json',Authorization:'Bearer '+T,...(o.headers||{})},body:o.body&&JSON.stringify(o.body)});if(r.status===401){logout();throw 0}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.detail||r.statusText);return j}
-function logout(){sessionStorage.removeItem('tok');T='';boot()}
-async function signin(){T=document.getElementById('tok').value.trim();try{await api('/api/me');sessionStorage.setItem('tok',T);boot()}catch(e){document.getElementById('lerr').textContent='Invalid token'}}
-const kpi=(v,l)=>$('div',{class:'card kpi'},$('b',{},v),$('span',{},l));
-const tag=s=>$('span',{class:'tag '+s},s);
-const table=(cols,rows,fn)=>$('table',{},$('tr',{},cols.map(c=>$('th',{},c))),rows.map(r=>$('tr',{},fn(r).map(c=>$('td',{},c)))));
+/* ===== helpers ===== */
+const h=(tag,a={},...kids)=>{const e=document.createElement(tag);for(const[k,v]of Object.entries(a||{})){if(v==null||v===false)continue;
+  if(k==='on')for(const[ev,f]of Object.entries(v))e.addEventListener(ev,f);else if(k==='class')e.className=v;
+  else if(k==='style')e.setAttribute('style',v);else if(k in e&&k!=='list')e[k]=v;else e.setAttribute(k,v)}
+  for(const c of kids.flat(9)){if(c==null||c===false)continue;e.append(c instanceof Node?c:document.createTextNode(String(c)))}return e};
+const $app=document.getElementById('app'),tip=document.getElementById('tip');
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const parse=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
 const inr=n=>n==null?'—':'₹'+Math.round(n).toLocaleString('en-IN');
-const when=t=>t?new Date(t*1000).toLocaleString('en-IN'):'';
+const nf=n=>Math.round(n).toLocaleString('en-IN');
+const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOW=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const TODAY=iso(new Date());
+const HERO_COL={jaggery:'var(--jag)',soya:'var(--soya)',makhana:'var(--mak)',brand:'var(--y)'};
+const heroCol=p=>HERO_COL[(p||'').toLowerCase()]||'var(--rng)';
+const HERO_LABEL={jaggery:'Jaggery',soya:'Soya',makhana:'Makhana',brand:'Brand',seasoning:'Seasoning',poha:'Poha',besan:'Besan',pulses:'Pulses'};
+const statusLabel=s=>({needs_md:'Needs MD',needs_qa:'Needs QA',published_dry_run:'Published (dry run)',auto_replied:'Auto-replied',escalated_qa:'To QA',escalated_md:'To MD',needs_human:'Needs reply',sample_sent:'Sample sent'}[s]||s.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()));
+const pill=s=>h('span',{class:'pillx s-'+s},statusLabel(s));
+let toastT;const toast=m=>{document.querySelector('.toast')?.remove();const t=h('div',{class:'toast',role:'status'},m);document.body.append(t);clearTimeout(toastT);toastT=setTimeout(()=>t.remove(),3200)};
+function showTip(ev,html){tip.innerHTML=html;tip.style.display='block';const r=tip.getBoundingClientRect();let x=ev.clientX+14,y=ev.clientY-r.height-10;
+  if(x+r.width>innerWidth-8)x=ev.clientX-r.width-14;if(y<8)y=ev.clientY+16;tip.style.left=x+'px';tip.style.top=y+'px'}
+const hideTip=()=>tip.style.display='none';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ===== phases & key dates (Brand Bible section 10) ===== */
+const PHASES=[{n:0,name:'Build trust',from:'2026-10-21',to:'2026-11-05'},{n:1,name:'Hero launch',from:'2026-11-06',to:'2026-12-06'},{n:2,name:'Full range',from:'2026-12-07',to:'2027-01-31'}];
+const phaseOf=s=>PHASES.find(p=>s>=p.from&&s<=p.to);
+const KEYDATES={'2026-10-20':'Site live','2026-10-21':'Phase 0','2026-11-06':'Packs land','2026-11-08':'Diwali · paid starts','2026-12-07':'Phase 2','2027-01-13':'Lohri'};
+const SLOT={0:['Mon','Jaggery reel','jaggery'],2:['Wed','Soya reel','soya'],4:['Fri','Makhana reel','makhana'],5:['Sat','Brand/range carousel','brand'],6:['Sun','Brand/range carousel','brand']};
+
+/* ===== data layer: live API when reachable, otherwise labelled sample data ===== */
+let MODE='boot',TOKEN='',ME={name:'',role:'viewer'},DATA=null;
+try{TOKEN=sessionStorage.getItem('ctok')||''}catch(e){}
+async function api(path,opt={}){
+  const r=await fetch(path,{...opt,headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},body:opt.body?JSON.stringify(opt.body):undefined});
+  const ct=r.headers.get('content-type')||'';
+  if(!ct.includes('json'))throw new Error('not-api');
+  const j=await r.json();if(r.status===401)throw new Error('401');if(!r.ok)throw new Error(j.detail||r.statusText);return j}
+const normPost=p=>{let f=p.flags;if(typeof f==='string'){try{f=JSON.parse(f)}catch(e){f={}}}
+  const ts=p.scheduled_for||p.published_at||p.created_at;return{...p,flags:f||{},date:p.date||iso(new Date(ts*1000)),time:p.time||new Date(ts*1000).toTimeString().slice(0,5)}};
+async function loadLive(){
+  const [me,ov,posts,ser,msg,leads,calls,site,roi,gr]=await Promise.all([api('/api/me'),api('/api/overview'),api('/api/posts'),api('/api/series?days=30'),
+    api('/api/messages'),api('/api/leads'),api('/api/calls'),api('/api/site'),api('/api/roi'),api('/api/growth')]);
+  ME=me;return{ov,posts:posts.map(normPost),ser,msg,leads,calls,site,roi,gr}}
+
+/* sample data: dates follow the Handbook calendar; captions use Handbook starters */
+function sample(){
+  const P=(id,date,time,hero,format,title,status,caption,flags={})=>({id,date,time,hero,format,title,status,caption,flags,hashtags:'#Century #PureHomeFood #CenturySince1980'});
+  const posts=[
+    P(1,'2026-10-21','13:00','brand','reel','B1 · 1980 se, ek hi vaada','approved','Long before wellness trends, there was home food: pure ingredients, honest choices. We have been making it since 1980.',{needs_md:false}),
+    P(2,'2026-10-23','19:00','makhana','reel','M1 · 5 minute, 1 kadhai','approved','Healthy snacking, made at home with ingredients you trust. Your ghee. Your spices. Your snack.'),
+    P(3,'2026-10-24','13:00','brand','carousel','B2 · What “Nothing less” means','needs_md','Pure home food. Nothing less. Here is what that promise looks like in practice.',{needs_md:true}),
+    P(4,'2026-10-26','13:00','jaggery','reel','J5 · Gud wali chai phat gayi?','approved','The one jaggery-chai mistake almost everyone makes. Switch off the flame, let it settle, then stir in the jaggery.'),
+    P(5,'2026-10-28','19:00','soya','reel','S3 · Soya rubbery lagta hai?','approved','Soft, juicy soya every time. Follow these 3 steps.'),
+    P(6,'2026-10-30','13:00','brand','reel','B3 · Aapke khaane se pehle','needs_md','Every batch is checked before it carries our name. Take a look inside. 250+ quality checks on our pulses*.',{needs_md:true,warnings:['Keep the asterisk and do not explain the parameters without QA’s list']}),
+    P(7,'2026-10-31','13:00','jaggery','carousel','J2 · Sugar vs jaggery: the honest version','needs_qa','Most brands won’t tell you this part. We will. Jaggery is still sugar; ours is a less-refined swap with no chemicals.',{needs_qa:true,warnings:['Check “less-refined” wording against the approved framing']}),
+    P(8,'2026-11-02','13:00','jaggery','reel','J3 · 4 jagah, cheeni ki jagah gud','draft','Cheeni ki jagah gud, par kaise? Quick-dissolving, so it works in chai, coffee, shakes, oats and mithai.',{errors:['CTA “Buy now” not allowed until the MD sets a sales start date and prices'],warnings:['Missing brand hashtag #CenturySince1980']}),
+    P(9,'2026-11-04','19:00','soya','reel','S1 · Paneer se zyada protein? Haan','approved','Vegetarian and chasing protein? 35% more protein than paneer*. *Basis on pack.'),
+    P(10,'2026-11-06','13:00','brand','reel','B4 · You may have already tasted our jaggery','needs_md','Some of India’s leading food brands use our jaggery as an ingredient. Now it comes straight to your kitchen.',{needs_md:true}),
+    P(11,'2026-11-08','12:00','makhana','reel','M3 · Ek kadhai, 4 flavours (Diwali)','approved','Your Diwali snack platter, sorted in one kadhai. Serving suggestion.'),
+    P(12,'2026-11-09','13:00','jaggery','reel','J4 · One sachet. One cup.','approved','Sweetness, measured for you. Carry it anywhere.'),
+    P(13,'2026-11-11','19:00','soya','carousel','S2 · Kaunsa soya, kis dish ke liye?','approved','Four sizes, one rule: pick by the dish. Save this.'),
+    P(14,'2026-11-13','19:00','makhana','reel','M4 · Gud wali makhana kheer','approved','A festive classic, sweetened with jaggery. Serving suggestion.'),
+    P(15,'2026-11-16','13:00','jaggery','reel','J6 · Ganne se cup tak','draft','From cane to cup, checked at every step.'),
+    P(16,'2026-12-07','13:00','seasoning','reel','O1 · Oregano sachet bacha hai?','approved','Six ways to use that oregano sachet. Number 4 is our favourite. Serving suggestion.'),
+    P(17,'2026-12-12','12:00','poha','carousel','P3 · Ek packet, 5 nashte','approved','Five breakfasts from one pack. Which is yours? Naturally gluten-free and rich in dietary fibre. Serving suggestion.'),
+    P(18,'2026-12-14','13:00','jaggery','reel','J1 · Kya aapka gud chemical se saaf kiya gaya hai?','approved','Lighter isn\'t always purer. Here\'s what to look for in your gud.'),
+    P(19,'2026-12-16','19:00','soya','reel','S5 · Keema, bina meat ke','approved','All the keema flavour. Fully vegetarian. Serving suggestion.'),
+    P(20,'2026-12-18','19:00','makhana','reel','M5 · Makhana sirf snack nahi','approved','Tonight\'s sabzi has a crunchy twist. Serving suggestion.')];
+  // reach series: 30 days, rising as the account warms up (sample)
+  const days=[];for(let i=29;i>=0;i--){const d=addDays(new Date(),-i);const k=29-i;const reach=Math.round(900+k*130+Math.sin(k/2.2)*420+(k%7===2?900:0));
+    days.push({d:iso(d),reach,saves:Math.round(reach*.031),shares:Math.round(reach*.012),actions:6+Math.round(k*.9+Math.cos(k)*3)})}
+  const msg=[
+    ['instagram','a.sharma_22','Is this jaggery good for diabetics?','diabetic','auto_replied','Jaggery is still a form of sugar, so we don\'t recommend it as a sugar substitute for diabetes. Please check with your doctor.',1.2],
+    ['instagram','priya.kitchen','Where can I buy?','where_buy','auto_replied','Launching very soon in Delhi NCR. Follow us or join our WhatsApp list to hear first.',2.5],
+    ['whatsapp','+91 98xxxxxx21','Makhana pack mein insect mila, bahut kharab quality','complaint','escalated_qa','We\'re sorry, that\'s not the Century standard. Please DM us your batch number and a photo, and we\'ll sort it out quickly.',0.4],
+    ['instagram','fitwithraj','Is this organic?','organic','auto_replied','This pack isn\'t sold as certified organic. Every batch is quality-checked before packing, and the QR on the pack shows which of our own plants made it.',5],
+    ['whatsapp','+91 99xxxxxx08','Need 20 kg jaggery powder for my cafe, rate?','where_buy','needs_human','',3.1],
+    ['instagram','spam_acct_77','free followers click here https://bit.ly/x','abuse','hidden','',6],
+    ['facebook','Meena Gupta','Can you share the lab report for besan?','general','needs_human','',0.9]
+  ].map((m,i)=>({id:i+1,channel:m[0],sender:m[1],body:m[2],category:m[3],status:m[4],reply:m[5],ts:Date.now()/1000-m[6]*3600,replied_at:m[4]==='auto_replied'?1:null}));
+  const leads=[['Cafe Kaapi, Gurgaon','+91 99xxxxxx08','whatsapp','bulk jaggery powder, cafe','new',80,null],['Sneha R.','+91 98xxxxxx45','instagram','soya chunks, pulao','contacted',55,null],
+    ['Hotel Rasoi, Noida','+91 97xxxxxx12','call','sachets, restaurant','qualified',78,45000],['Anita K.','+91 96xxxxxx90','website','makhana classic','sample_sent',60,null],['Tea Junction','+91 95xxxxxx31','call','jaggery sachets, cafe','won',85,28000],['Vikas M.','+91 94xxxxxx77','instagram','pulses','lost',30,null],['Ritu S.','+91 93xxxxxx02','whatsapp','makhana, gifting','new',58,null]]
+    .map((l,i)=>({id:i+1,name:l[0],phone:l[1],source:l[2],interest:l[3],stage:l[4],score:l[5],value:l[6]}));
+  const calls=[['+91 99xxxxxx08',2,'Jaggery powder ka rate kya hai?','Launching very soon in Delhi NCR. Follow us or join our WhatsApp list to hear first.','hi-IN','ai'],
+    ['+91 97xxxxxx12',20,'Sachet ka sample chahiye hotel ke liye','Thank you for calling Century. Our team will call you back shortly. You can also WhatsApp us.','hi-IN','ai'],
+    ['+91 90xxxxxx64',27,'Mujhe legal notice bhejna hai','I\'m connecting you to our team. You can also reach us on 1800 296 7999.','hi-IN','escalated']].map((c,i)=>({id:i+1,caller:c[0],ts:Date.now()/1000-c[1]*3600,transcript:c[2],answer:c[3],language:c[4],handled_by:c[5]}));
+  const hist=[];for(let i=29;i>=0;i--)hist.push({ts:Date.now()/1000-i*900,ok:i===11?0:1,status:i===11?503:200,ms:i===11?0:Math.round(380+Math.sin(i/3)*120+(i%9===0?260:0)),ssl_days:71,url:'https://thecentury.in/',error:i===11?'503 from origin':''});
+  const roi={window_days:30,hours_saved:38.4,money_saved_inr:11520,leads:41,won:3,won_value_inr:96000,pipeline_inr:210000,conversion_pct:7.3,
+    breakdown:[{kind:'post',count:19,hours:14.3},{kind:'reply',count:212,hours:14.1},{kind:'call',count:48,hours:4.8},{kind:'lead_followup',count:41,hours:6.8},{kind:'site_check',count:96,hours:8.0}],
+    assumptions:{hourly_cost_inr:300,note:'Sample figures. Lead value stays blank in the live app until prices are set.'}};
+  const gr={posts:[['J5 · Gud wali chai phat gayi','jaggery',18400,640,260],['M1 · 5 minute, 1 kadhai','makhana',15200,520,190],['S3 · Soya rubbery lagta hai?','soya',12100,410,120],['B1 · 1980 se, ek hi vaada','brand',22800,330,140],['J2 · Sugar vs jaggery','jaggery',9800,180,40],['S1 · Paneer se zyada protein?','soya',8300,120,35]]
+    .map((p,i)=>({id:i,title:p[0],hero:p[1],reach:p[2],saves:p[3],shares:p[4],saves_shares_per_1k:Math.round(1000*(p[3]+p[4])/p[2]*10)/10}))};
+  gr.posts.sort((a,b)=>b.saves_shares_per_1k-a.saves_shares_per_1k);
+  return{ov:{sales_open:false,live:{meta:false,sarvam:false,whatsapp:false},md_note:null},posts,ser:{days,funnel:{new:12,contacted:14,qualified:8,sample_sent:4,won:3},mix:{}},msg:{messages:msg,sla_breaches:[{id:3,overdue_h:0}]},leads:{leads,stages:['new','contacted','qualified','sample_sent','won','lost']},calls,site:{history:hist,uptime_pct:96.7},roi,gr}}
+
+/* ===== client-side check used in sample mode only (the server runs the full rule set in app/compliance.py) ===== */
+const BAN=['sugar-free','sugar free','diabetic-friendly','safe for diabetics','detox','weight loss','burns fat','guilt-free','organic','cures','immunity','healthier than sugar','best in india','purest','saffola','true elements','chaayos','chemical-free'];
+function sampleCheck(p){const t=(p.caption+' '+p.cta+' '+p.hashtags).toLowerCase(),errors=[],warnings=[];
+  BAN.forEach(w=>{if(t.includes(w))errors.push('Banned word/claim: “'+w+'”')});
+  ['buy now','order now','shop now'].forEach(w=>{if(t.includes(w))errors.push('CTA “'+w+'” not allowed until the MD sets a sales start date and prices')});
+  ['#century','#purehomefood','#centurysince1980'].forEach(w=>{if(!t.includes(w))warnings.push('Missing brand hashtag '+w)});
+  if(t.includes('35%')&&t.includes('paneer')&&!p.caption.includes('*'))errors.push('Keep the * on “35% more protein than paneer*”');
+  const needs_md=p.hero==='brand'||p.is_paid||p.is_creator;if(p.is_paid&&!['jaggery','soya','makhana'].includes(p.hero))errors.push('Paid spend is for hero products only');
+  return{errors,warnings,needs_md,needs_qa:false}}
+
+/* ===== actions (live -> API, sample -> local state) ===== */
+const canApprove=p=>(p.status==='needs_qa'&&['qa','md'].includes(ME.role))||(p.status==='needs_md'&&ME.role==='md');
+const canReject=p=>['draft','needs_qa','needs_md'].includes(p.status)&&['md','qa','marketing'].includes(ME.role);
+const canSchedule=p=>p.status==='approved'&&['md','marketing'].includes(ME.role);
+async function doReview(p,decision,note=''){
+  if(MODE==='live'){try{const r=await api(`/api/posts/${p.id}/review`,{method:'POST',body:{decision,note}});toast(r.warning||'Post '+decision+'d');await refresh()}catch(e){toast(e.message)}return}
+  if(decision==='reject'){p.status='rejected'}else if(p.status==='needs_qa'){if(p.flags.errors?.length)return toast('Blocking compliance errors remain');p.status=p.flags.needs_md?'needs_md':'approved'}else p.status='approved';
+  toast('Post '+(decision==='reject'?'rejected':'approved'));render()}
+async function doSchedule(p,val){
+  if(!val)return toast('Pick a date and time first');const when=new Date(val);
+  if(MODE==='live'){try{await api(`/api/posts/${p.id}/schedule`,{method:'POST',body:{when:when.getTime()/1000}});toast('Scheduled');await refresh()}catch(e){toast(e.message)}return}
+  p.status='scheduled';p.date=iso(when);p.time=when.toTimeString().slice(0,5);toast('Scheduled');render()}
+async function doCreate(f){
+  const body={title:f.title,hero:f.hero,bucket:f.hero==='brand'?'brand':'product',format:f.format,caption:f.caption,cta:f.cta,hashtags:f.hashtags,is_paid:f.is_paid,is_creator:f.is_creator};
+  if(!body.caption.trim())return toast('Write a caption first');
+  if(MODE==='live'){try{const r=await api('/api/posts',{method:'POST',body});toast('Saved as '+statusLabel(r.status).toLowerCase()+(r.check.errors.length?' · '+r.check.errors.length+' issue(s)':''));await refresh()}catch(e){toast(e.message)}return}
+  const chk=sampleCheck({...body,caption:f.caption});const id=Math.max(...DATA.posts.map(x=>x.id))+1;
+  const st=chk.errors.length?'draft':chk.needs_md?'needs_md':'approved';
+  DATA.posts.push({id,date:f.date||TODAY,time:'13:00',hero:f.hero,format:f.format,title:f.title||'Untitled',status:st,caption:f.caption,flags:chk,hashtags:f.hashtags});
+  toast('Saved as '+statusLabel(st).toLowerCase()+(chk.errors.length?' · '+chk.errors.length+' issue(s)':''));render()}
+async function doResolve(m,reply){if(MODE==='live'){try{await api(`/api/messages/${m.id}/resolve?reply=`+encodeURIComponent(reply||''),{method:'POST'});toast('Marked resolved');await refresh()}catch(e){toast(e.message)}return}
+  m.status='resolved';m.reply=reply||m.reply;m.replied_at=1;toast('Marked resolved');render()}
+async function doMove(l,stage,value){if(MODE==='live'){try{await api(`/api/leads/${l.id}/move`,{method:'POST',body:{stage,value:value??null}});toast('Lead moved to '+stage);await refresh()}catch(e){toast(e.message)}return}
+  l.stage=stage;if(value!=null)l.value=value;toast('Lead moved to '+stage);render()}
+async function doSite(){if(MODE==='live'){try{await api('/api/site/check',{method:'POST'});toast('Checked');await refresh()}catch(e){toast(e.message)}return}toast('Sample mode: connect the live app to run real checks')}
+
+/* ===== charts (inline SVG, one scale per chart, theme tokens only) ===== */
+const redraws=[];
+function niceMax(v){if(v<=0)return 4;const p=Math.pow(10,Math.floor(Math.log10(v)));const n=v/p;return(n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p}
+function lineChart(host,pts,o={}){
+  const draw=()=>{const W=Math.max(host.clientWidth,260),H=o.h||220,m={l:46,r:14,t:14,b:26};
+    const ys=pts.map(p=>p.y),mx=niceMax(Math.max(...ys,1)),n=pts.length,iw=W-m.l-m.r,ih=H-m.t-m.b;
+    const X=i=>m.l+(n<2?0:i*iw/(n-1)),Y=v=>m.t+ih-(v/mx)*ih;
+    const ticks=[0,1,2,3,4].map(k=>mx*k/4);
+    const fmt=o.fmt||nf;
+    const line=pts.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.y).toFixed(1)).join('');
+    const area=line+`L${X(n-1).toFixed(1)} ${m.t+ih}L${X(0).toFixed(1)} ${m.t+ih}Z`;
+    const step=Math.ceil(n/(W<420?4:7));
+    let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label||'Line chart')}"><g class="ax">`;
+    ticks.forEach(t=>{s+=`<line class="grid-l" x1="${m.l}" x2="${W-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${m.l-8}" y="${Y(t)+4}" text-anchor="end">${fmt(t)}</text>`});
+    pts.forEach((p,i)=>{if(i%step===0||i===n-1)s+=`<text x="${X(i)}" y="${H-6}" text-anchor="${i===0?'start':i===n-1?'end':'middle'}">${p.x}</text>`});
+    s+=`</g>`;
+    if(!o.noArea)s+=`<path d="${area}" fill="var(--chart-soft)"/>`;
+    s+=`<path d="${line}" fill="none" stroke="var(--chart)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    (o.marks||[]).forEach(i=>{s+=`<circle cx="${X(i)}" cy="${Y(pts[i].y)}" r="4.5" fill="var(--surface)" stroke="var(--bad-fg)" stroke-width="2"/>`});
+    s+=`<circle cx="${X(n-1)}" cy="${Y(pts[n-1].y)}" r="4" fill="var(--chart)" stroke="var(--surface)" stroke-width="2"/>`;
+    s+=`<line id="cx" y1="${m.t}" y2="${m.t+ih}" stroke="var(--ink2)" stroke-width="1" stroke-dasharray="3 3" style="display:none"/>`;
+    s+=`<circle id="cd" r="5" fill="var(--chart)" stroke="var(--surface)" stroke-width="2" style="display:none"/>`;
+    s+=`<rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="hit"/></svg>`;
+    host.innerHTML=s;const svg=host.firstChild,cx=svg.querySelector('#cx'),cd=svg.querySelector('#cd');
+    const move=ev=>{const r=svg.getBoundingClientRect(),px=(ev.clientX-r.left)*(W/r.width);let i=Math.round((px-m.l)/(iw/(n-1||1)));i=Math.max(0,Math.min(n-1,i));
+      cx.setAttribute('x1',X(i));cx.setAttribute('x2',X(i));cx.style.display='';cd.setAttribute('cx',X(i));cd.setAttribute('cy',Y(pts[i].y));cd.style.display='';
+      showTip(ev,`<b>${esc(pts[i].full||pts[i].x)}</b><br>${esc(o.name||'Value')}: ${fmt(pts[i].y)}${o.extra?'<br>'+esc(o.extra(i)):''}`)};
+    const hit=svg.querySelector('#hit');hit.addEventListener('pointermove',move);hit.addEventListener('pointerleave',()=>{cx.style.display=cd.style.display='none';hideTip()})};
+  draw();redraws.push(draw)}
+function hbars(host,rows,o={}){host.className='hb';host.replaceChildren();const mx=Math.max(...rows.map(r=>r.v),1);
+  rows.forEach(r=>{const tr=h('div',{class:'tr'},h('div',{class:'f',style:`width:${(r.v/mx*100).toFixed(1)}%;${r.c?'background:'+r.c:''}`}));
+    const tt=ev=>showTip(ev,`<b>${esc(r.t)}</b><br>${esc(r.tip||(nf(r.v)+(o.unit||'')))}`);
+    [tr].forEach(e=>{e.addEventListener('pointermove',tt);e.addEventListener('pointerleave',hideTip)});
+    host.append(h('div',{class:'t'},r.t),tr,h('div',{class:'vl'},r.label??nf(r.v)))})}
+
+/* ===== views ===== */
+const ICON={ov:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',ap:'<path d="M5 12l4 4 10-10"/>',in:'<path d="M4 5h16v11H8l-4 4z"/>',ld:'<path d="M3 5h18l-7 8v6l-4-2v-4z"/>',st:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',roi:'<path d="M12 3v18M17 7H9.5a3 3 0 000 6h5a3 3 0 010 6H6"/>'};
+const TABS=[['ov','Overview'],['cal','Calendar'],['ap','Content & approvals'],['in','Inbox & calls'],['ld','Leads'],['st','Site health'],['roi','ROI & growth']];
+let tab='ov',calM=null,selDay=null;
+try{tab=location.hash.slice(1)||sessionStorage.getItem('ctab')||'ov'}catch(e){}
+if(!TABS.some(t=>t[0]===tab))tab='ov';
+
+function frame(body){
+  const ph=phaseOf(TODAY)||(TODAY<PHASES[0].from?PHASES[0]:PHASES[2]);
+  const pending=DATA.posts.filter(p=>['needs_md','needs_qa'].includes(p.status)).length;
+  return h('div',{},
+    h('header',{class:'top'},h('div',{class:'logo'},'Cent',h('u',{},'ur'),'y',h('sup',{},'®')),
+      h('div',{class:'phase'},h('b',{},'Phase '+ph.n),h('span',{},ph.name+' · '+ph.from.slice(8)+' '+MON[+ph.from.slice(5,7)-1].slice(0,3)+' to '+ph.to.slice(8)+' '+MON[+ph.to.slice(5,7)-1].slice(0,3))),
+      h('div',{class:'who'},MODE==='sample'?h('span',{class:'pill-demo'},'Sample data'):'',
+        MODE==='sample'?h('select',{'aria-label':'View as role',on:{change:e=>{ME={name:{md:'Rahul Arora',marketing:'Tarun Lakhanpal',qa:'QA lead',viewer:'Viewer'}[e.target.value],role:e.target.value};render()}}},
+          ['md','marketing','qa','viewer'].map(r=>h('option',{value:r,selected:r===ME.role},'View as '+({md:'MD',marketing:'Marketing',qa:'QA',viewer:'Viewer'}[r])))):h('span',{},ME.name+' · '+ME.role),
+        MODE==='live'?h('button',{class:'btn sm',on:{click:()=>{try{sessionStorage.removeItem('ctok')}catch(e){}TOKEN='';boot()}}},'Sign out'):'')),
+    h('div',{class:'shell'},
+      h('nav',{class:'rail','aria-label':'Sections'},TABS.map(([k,l])=>h('button',{class:k===tab?'on':'','aria-current':k===tab?'page':null,on:{click:()=>{tab=k;try{sessionStorage.setItem('ctab',k)}catch(e){}history.replaceState(null,'','#'+k);render()}}},
+        (()=>{const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('viewBox','0 0 24 24');s.innerHTML=ICON[k];return s})(),l,k==='ap'&&pending?h('span',{class:'badge'},pending):''))),
+      h('main',{},body)))}
+
+const kpi=(v,l,d)=>h('div',{class:'card kpi'},h('div',{class:'v'},v),h('div',{class:'l'},l),d?h('div',{class:'d'},d):'');
+const chartCard=(title,sub,builder)=>{const host=h('div',{class:'chart'});const c=h('div',{class:'card'},h('header',{},h('h3',{},title),sub?h('small',{},sub):''),host);queueMicrotask(()=>builder(host));return c};
+const shortD=s=>{const d=parse(s);return d.getDate()+' '+MON[d.getMonth()].slice(0,3)};
+
+function vOverview(){
+  const {roi,ser,gr}=DATA,days=ser.days,reach30=days.reduce((a,d)=>a+d.reach,0);
+  const att=[];
+  DATA.posts.filter(p=>p.status==='needs_md').forEach(p=>att.push({t:`${p.title}: waiting for MD approval`,go:'cal',date:p.date}));
+  DATA.posts.filter(p=>p.status==='needs_qa').forEach(p=>att.push({t:`${p.title}: waiting for QA sign-off`,go:'cal',date:p.date}));
+  DATA.posts.filter(p=>p.status==='draft'&&(p.flags.errors||[]).length).forEach(p=>att.push({t:`${p.title}: blocked, ${p.flags.errors[0]}`,go:'cal',date:p.date,bad:1}));
+  DATA.msg.sla_breaches.forEach(b=>att.push({t:`Message #${b.id} is past its reply limit`,go:'in',bad:1}));
+  DATA.msg.messages.filter(m=>m.status.startsWith('escalated')).forEach(m=>att.push({t:`${statusLabel(m.status)}: “${m.body.slice(0,60)}”`,go:'in',bad:1}));
+  const down=DATA.site.history.filter(r=>!r.ok);if(down.length)att.push({t:`Site returned an error ${down.length} time(s) recently`,go:'st'});
+  const mix=(()=>{const c={jaggery:0,soya:0,makhana:0,brand:0,range:0};DATA.posts.filter(p=>p.status!=='rejected'&&p.status!=='draft').forEach(p=>{if(p.hero in c)c[p.hero]++;else c.range++});return c})();
+  const tot=Object.values(mix).reduce((a,b)=>a+b,0)||1,heroShare=Math.round(100*(mix.jaggery+mix.soya+mix.makhana)/tot);
+  return h('div',{},h('h2',{},'Overview'),h('p',{class:'sub'},'Last 30 days. What the automation did, what it earned back, and what needs a person.'),
+    MODE==='sample'?h('div',{class:'note'},'You are looking at sample data so the layout can be reviewed. The live app shows your real posts, messages and leads.'):'',
+    DATA.ov.md_note?h('div',{class:'note'},DATA.ov.md_note):'',
+    h('div',{class:'grid g-kpi'},kpi(roi.hours_saved.toFixed(1)+' h','Hours saved',inr(roi.money_saved_inr)+' of staff time'),kpi(nf(reach30),'Reach, 30 days',shortD(days[0].d)+' to '+shortD(days[days.length-1].d)),
+      kpi(roi.leads,'Leads captured',roi.won+' won · '+roi.conversion_pct+'% conversion'),kpi(inr(roi.won_value_inr),'Won lead value',roi.won_value_inr==null?'Set the average order value in .env':'Pipeline '+inr(roi.pipeline_inr))),
+    h('div',{class:'grid g-2'},
+      chartCard('Reach per day','All posts',host=>lineChart(host,days.map(d=>({x:shortD(d.d),y:d.reach})),{name:'Reach',label:'Reach per day',extra:i=>`Saves ${nf(days[i].saves)} · Shares ${nf(days[i].shares)}`})),
+      chartCard('Hours saved by automation','30 days',host=>hbars(host,roi.breakdown.map(b=>({t:({post:'Posting',reply:'Replies',call:'Calls',lead_followup:'Lead follow-up',lead_capture:'Lead capture',site_check:'Site checks'}[b.kind]||b.kind),v:b.hours,label:b.hours.toFixed(1)+' h',tip:`${b.count} actions · ${b.hours.toFixed(1)} h`})).sort((a,b)=>b.v-a.v)))),
+    h('div',{class:'grid g-2'},
+      chartCard('Lead funnel','Leads by stage',host=>{const f=ser.funnel||{};hbars(host,DATA.leads.stages.filter(s=>s!=='lost').map(s=>({t:statusLabel(s),v:f[s]||0})))}),
+      h('div',{class:'card'},h('header',{},h('h3',{},'Content mix'),h('small',{},'Scheduled, approved and published posts')),
+        (()=>{const wrap=h('div',{style:'position:relative;padding-top:6px'});const bar=h('div',{class:'mixbar',role:'img','aria-label':`Hero products are ${heroShare}% of content`});
+          const cols={jaggery:'var(--jag)',soya:'var(--soya)',makhana:'var(--mak)',brand:'var(--y)',range:'var(--rng)'};
+          Object.entries(mix).forEach(([k,v])=>{if(!v)return;const d=h('div',{style:`flex:${v};background:${cols[k]}`});d.addEventListener('pointermove',ev=>showTip(ev,`<b>${statusLabel(k)}</b><br>${v} of ${tot} posts`));d.addEventListener('pointerleave',hideTip);bar.append(d)});
+          const tg=h('div',{class:'tgt',style:'left:70%'});
+          bar.append(tg);wrap.append(bar,h('div',{class:'mixlab'},Object.entries(mix).map(([k,v])=>h('span',{},h('i',{class:'sw',style:`background:${cols[k]}`}),`${statusLabel(k)} ${v}`))),
+            h('p',{class:'sub',style:'margin:10px 0 0'},`Hero products (Jaggery, Soya, Makhana) are ${heroShare}% of content. The dashed line marks the 70% target.`));return wrap})())),
+    h('div',{class:'card'},h('header',{},h('h3',{},'Needs attention'),h('small',{},att.length+' open')),
+      att.length?h('ul',{class:'att'},att.slice(0,8).map(a=>h('li',{},h('span',{class:'dot'+(a.bad?' bad':'')}),h('span',{},a.t),h('button',{class:'btn sm',on:{click:()=>{tab=a.go;if(a.date){selDay=a.date;calM=parse(a.date)}render()}}},'Open')))):h('p',{class:'muted'},'Nothing waiting. Approvals, replies and site checks are all clear.')))}
+
+function vCalendar(){
+  if(!calM){const t=parse(TODAY);calM=(TODAY>='2026-10-01'&&TODAY<='2027-01-31')?new Date(t.getFullYear(),t.getMonth(),1):new Date(2026,9,1)}
+  if(!selDay)selDay=TODAY;
+  const y=calM.getFullYear(),m=calM.getMonth(),first=new Date(y,m,1),lead=(first.getDay()+6)%7,start=addDays(first,-lead);
+  const byDay={};DATA.posts.forEach(p=>(byDay[p.date]=byDay[p.date]||[]).push(p));
+  const cells=[];for(let i=0;i<42;i++){const d=addDays(start,i);if(i>=35&&d.getMonth()!==m)break;cells.push(d)}
+  const grid=h('div',{class:'cal',role:'grid','aria-label':MON[m]+' '+y},DOW.map(d=>h('div',{class:'dow'},d)),cells.map(d=>{
+    const s=iso(d),ps=byDay[s]||[],out=d.getMonth()!==m,dowI=(d.getDay()+6)%7,ph=phaseOf(s);
+    const showSlot=!ps.length&&s>=TODAY&&ph&&SLOT[dowI]&&!out;
+    return h('button',{class:'cell'+(out?' out':'')+(s===TODAY?' today':'')+(s===selDay?' sel':''),'aria-label':`${d.getDate()} ${MON[d.getMonth()]}, ${ps.length} posts`,on:{click:()=>{selDay=s;render()}}},
+      h('div',{class:'dn'},h('span',{},d.getDate()),dowI===1&&ph&&!out?h('span',{class:'muted',style:'font-size:9.5px;font-weight:500',title:'MD workshop day: no approvals'},'MD off'):''),
+      KEYDATES[s]?h('div',{class:'key'},KEYDATES[s]):'',
+      ps.slice(0,3).map(p=>h('div',{class:'chip st-'+p.status,style:'--c:'+heroCol(p.hero),title:p.title+' · '+statusLabel(p.status)},h('span',{},chipText(p)),
+        p.status==='needs_md'?h('i',{style:'background:var(--wait-fg);color:var(--wait-bg)'},'MD'):p.status==='needs_qa'?h('i',{style:'background:var(--wait-fg);color:var(--wait-bg)'},'QA'):p.status==='draft'?h('i',{style:'background:var(--draft-fg);color:var(--draft-bg)'},'Draft'):'')),
+      ps.length>3?h('div',{class:'muted',style:'font-size:10.5px'},'+'+(ps.length-3)+' more'):'',
+      showSlot?h('div',{class:'slot',title:'Open slot in the weekly cadence'},SLOT[dowI][1]):'')}));
+  const sel=selDay&&byDay[selDay]?byDay[selDay]:[];
+  const panel=h('aside',{class:'card panel'},selDay?[
+    h('header',{},h('h3',{},parse(selDay).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})),phaseOf(selDay)?h('small',{},'Phase '+phaseOf(selDay).n+' · '+phaseOf(selDay).name):''),
+    KEYDATES[selDay]?h('div',{class:'note'},KEYDATES[selDay]):'',
+    (parse(selDay).getDay()===2)?h('p',{class:'muted'},'Tuesday is the MD’s workshop day. Ask for approvals on WhatsApp only.'):'',
+    sel.length?sel.map(postCard):h('p',{class:'muted'},SLOT[(parse(selDay).getDay()+6)%7]&&phaseOf(selDay)?`Open slot: ${SLOT[(parse(selDay).getDay()+6)%7][1]}. Draft it under Content & approvals.`:'No posts on this day.')
+  ]:[h('header',{},h('h3',{},'Pick a day')),h('p',{class:'muted'},'Select a day to see its posts, claim checks and approval actions.')]);
+  const legend=h('div',{class:'legend'},[['Jaggery','var(--jag)'],['Soya','var(--soya)'],['Makhana','var(--mak)'],['Brand','var(--y)'],['Seasoning, poha, besan, pulses','var(--rng)']].map(([l,c])=>h('span',{},h('i',{class:'sw',style:'background:'+c},''),l)),
+    h('span',{},pill('needs_md'),' waiting on a person'),h('span',{},pill('approved')),h('span',{},pill('scheduled')),h('span',{},pill('draft')));
+  return h('div',{},h('h2',{},'Content calendar'),h('p',{class:'sub'},'Monday jaggery, Wednesday soya, Friday makhana, weekend brand or range carousel. Dashed boxes are open slots.'),
+    h('div',{class:'tools'},h('button',{class:'btn','aria-label':'Previous month',on:{click:()=>{calM=new Date(y,m-1,1);render()}}},'‹'),h('h3',{},MON[m]+' '+y),h('button',{class:'btn','aria-label':'Next month',on:{click:()=>{calM=new Date(y,m+1,1);render()}}},'›'),
+      h('button',{class:'btn',on:{click:()=>{calM=null;selDay=TODAY;render()}}},'Today')),legend,h('div',{class:'calwrap'},grid,panel))}
+
+const chipText=p=>{const m=/^([A-Z][a-z]?\d+)\b/.exec(p.title||'');const f=p.format==='carousel'?'Carousel':p.format==='reel'?'Reel':p.format[0].toUpperCase()+p.format.slice(1);return m?m[1]+' · '+f:f+' · '+(HERO_LABEL[p.hero]||p.hero)};
+function postCard(p){
+  const f=p.flags||{},errs=f.errors||[],warns=f.warnings||[];let when,reason;
+  const card=h('div',{class:'postcard',style:'--c:'+heroCol(p.hero)},
+    h('div',{style:'display:flex;gap:6px;align-items:center;flex-wrap:wrap'},h('b',{},p.title||'Untitled'),pill(p.status)),
+    h('div',{class:'muted',style:'font-size:12px'},`${HERO_LABEL[p.hero]||p.hero} · ${p.format} · ${p.time||''}`),
+    h('p',{},(p.caption||'').slice(0,220)+((p.caption||'').length>220?'…':'')),
+    (errs.length||warns.length)?h('ul',{class:'issues'},errs.map(e=>h('li',{class:'e'},'✘ '+e)),warns.map(e=>h('li',{class:'w'},'! '+e))):h('div',{class:'muted',style:'font-size:12px'},'✔ Passed the claims check'));
+  const act=h('div',{class:'actions'});
+  if(canApprove(p))act.append(h('button',{class:'btn pri sm',on:{click:()=>doReview(p,'approve')}},p.status==='needs_qa'?'Sign off claims':'Approve'));
+  if(canReject(p)){reason=h('input',{type:'text',placeholder:'Reason (optional)','aria-label':'Rejection reason',style:'max-width:150px;padding:3px 8px;font-size:12px'});act.append(reason,h('button',{class:'btn sm',on:{click:()=>doReview(p,'reject',reason.value)}},'Reject'))}
+  if(canSchedule(p)){when=h('input',{type:'datetime-local','aria-label':'Publish time',style:'max-width:190px;padding:3px 8px;font-size:12px',value:p.date+'T'+(p.time||'13:00')});act.append(when,h('button',{class:'btn pri sm',on:{click:()=>doSchedule(p,when.value)}},'Schedule'))}
+  if(act.children.length)card.append(act);return card}
+
+function vContent(){
+  const F={hero:'jaggery',format:'reel',title:'',caption:'',cta:'',hashtags:'#Century #PureHomeFood #CenturySince1980',is_paid:false,is_creator:false,date:TODAY};
+  const fld=(l,el,wide)=>h('div',{class:wide?'wide':''},h('label',{class:'l',for:el.id},l),el);
+  const mk=(id,k,type='text')=>h('input',{id,type,value:F[k],on:{input:e=>F[k]=e.target.value}});
+  const sel=(id,k,opts)=>h('select',{id,class:'f',on:{change:e=>F[k]=e.target.value}},opts.map(o=>h('option',{value:o},HERO_LABEL[o]||o)));
+  const can=['md','marketing'].includes(ME.role);
+  const form=h('div',{class:'card'},h('header',{},h('h3',{},'New post'),h('small',{},'Checked against the claims rulebook as soon as you save')),
+    h('div',{class:'form'},fld('Title',mk('f-title','title')),fld('Product',sel('f-hero','hero',['jaggery','soya','makhana','seasoning','poha','besan','pulses','brand'])),fld('Format',sel('f-format','format',['reel','carousel','static','story'])),
+      MODE==='sample'?fld('Date',mk('f-date','date','date')):'',
+      fld('Caption',h('textarea',{id:'f-cap',on:{input:e=>F.caption=e.target.value}}),true),fld('CTA',mk('f-cta','cta')),fld('Hashtags',mk('f-tags','hashtags')),
+      h('label',{class:'l'},h('input',{type:'checkbox',on:{change:e=>F.is_paid=e.target.checked}}),' Paid boost (hero products only; MD approves)'),
+      h('label',{class:'l'},h('input',{type:'checkbox',on:{change:e=>F.is_creator=e.target.checked}}),' Creator or gifted post (needs #ad / #collab / #sponsored; MD approves)')),
+    h('div',{class:'actions'},h('button',{class:'btn pri',disabled:!can,on:{click:()=>doCreate(F)}},'Check and save'),!can?h('span',{class:'muted'},'Your role can view but not create posts.'):''));
+  const order=['needs_md','needs_qa','draft','approved','scheduled','published','published_dry_run','rejected'];
+  const rows=[...DATA.posts].sort((a,b)=>order.indexOf(a.status)-order.indexOf(b.status)||a.date.localeCompare(b.date));
+  return h('div',{},h('h2',{},'Content & approvals'),h('p',{class:'sub'},'Brand-level posts, paid boosts and creator posts go to the MD. Claims outside the approved list go to QA first. Nothing publishes until it is approved.'),form,
+    h('div',{class:'card',style:'margin-top:14px'},h('header',{},h('h3',{},'All posts'),h('small',{},rows.length+' posts')),h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['Date','Post','Status','Claims check',''].map(t=>h('th',{},t)))),
+      h('tbody',{},rows.map(p=>{const f=p.flags||{};return h('tr',{},h('td',{class:'num',style:'white-space:nowrap'},shortD(p.date)),h('td',{},h('b',{},p.title||'Untitled'),h('div',{class:'muted',style:'font-size:12px'},(HERO_LABEL[p.hero]||p.hero)+' · '+p.format)),h('td',{},pill(p.status)),
+        h('td',{},(f.errors||[]).length?h('span',{class:'err'},f.errors[0]):(f.warnings||[]).length?h('span',{style:'color:var(--wait-fg)'},f.warnings[0]):h('span',{class:'muted'},'Passed')),
+        h('td',{},canApprove(p)?h('button',{class:'btn sm',on:{click:()=>doReview(p,'approve')}},'Approve'):h('button',{class:'btn sm',on:{click:()=>{selDay=p.date;calM=parse(p.date);tab='cal';render()}}},'Open')))})))))
+  )}
+
+function vInbox(){
+  const msgs=DATA.msg.messages,open=m=>!m.replied_at&&!['hidden','resolved'].includes(m.status);
+  const ago=ts=>{const hh=(Date.now()/1000-ts)/3600;return hh<1?Math.round(hh*60)+' min ago':hh<48?Math.round(hh)+' h ago':Math.round(hh/24)+' d ago'};
+  const item=m=>{const inp=h('input',{type:'text',placeholder:'Type reply and resolve','aria-label':'Reply',style:'max-width:260px'});
+    return h('div',{class:'postcard',style:'--c:'+(m.status.startsWith('escalated')?'var(--bad-fg)':'var(--line)')},
+      h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;align-items:center'},h('b',{},m.sender),h('span',{class:'muted',style:'font-size:12px'},m.channel+' · '+ago(m.ts)),pill(m.status),m.category!=='general'?h('span',{class:'muted',style:'font-size:12px'},m.category):''),
+      h('p',{style:'color:var(--ink)'},m.body),m.reply?h('p',{style:'border-left:3px solid var(--chart);padding-left:8px'},m.reply):'',
+      (m.status==='needs_human'||m.status.startsWith('escalated'))?h('div',{class:'actions'},inp,h('button',{class:'btn sm pri',disabled:ME.role==='viewer',on:{click:()=>doResolve(m,inp.value)}},'Resolve')):'')};
+  return h('div',{},h('h2',{},'Inbox & calls'),h('p',{class:'sub'},'Comments, DMs and WhatsApp in one list. Replies go out automatically only when they match the approved reply bank. Complaints go to QA, legal and health messages to the MD.'),
+    h('div',{class:'grid g-kpi'},kpi(msgs.filter(open).length,'Open messages'),kpi(msgs.filter(m=>m.auto||m.status==='auto_replied').length,'Replied automatically'),kpi(DATA.msg.sla_breaches.length,'Past reply limit','4 h for comments, 1 h for complaints'),kpi(DATA.calls.length,'Calls handled','by Sarvam voice, escalated when sensitive')),
+    h('div',{class:'grid g-2'},h('div',{class:'card'},h('header',{},h('h3',{},'Messages')),msgs.map(item)),
+      h('div',{class:'card'},h('header',{},h('h3',{},'Calls'),h('small',{},'Speech-to-text, approved answer, text-to-speech')),
+        h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['When','Caller','Heard','Answer','By'].map(t=>h('th',{},t)))),h('tbody',{},DATA.calls.map(c=>h('tr',{},h('td',{class:'num',style:'white-space:nowrap'},ago(c.ts)),h('td',{},c.caller),h('td',{},c.transcript),h('td',{},c.answer),h('td',{},c.handled_by==='ai'?pill('auto_replied'):pill('escalated_md'))))))))))}
+
+function vLeads(){const stages=DATA.leads.stages,L=DATA.leads.leads;
+  const card=l=>{const v=h('input',{type:'number',placeholder:'Order ₹',style:'max-width:100px;padding:3px 8px',value:l.value??'','aria-label':'Order value'});
+    const sel=h('select',{class:'f','aria-label':'Stage',style:'padding:3px 8px;max-width:140px',disabled:ME.role==='viewer',on:{change:e=>doMove(l,e.target.value,e.target.value==='won'&&v.value?+v.value:null)}},stages.map(s=>h('option',{value:s,selected:s===l.stage},statusLabel(s))));
+    return h('div',{class:'postcard',style:'--c:'+(l.score>=70?'var(--chart)':'var(--line)')},h('div',{style:'display:flex;gap:6px;align-items:center;flex-wrap:wrap'},h('b',{},l.name||l.phone),h('span',{class:'pillx s-new num'},'Score '+l.score)),
+      h('div',{class:'muted',style:'font-size:12px'},l.source+' · '+l.phone),h('p',{},l.interest),h('div',{class:'actions'},sel,v,l.value?h('b',{class:'num'},inr(l.value)):''))};
+  return h('div',{},h('h2',{},'Leads'),h('p',{class:'sub'},'Every WhatsApp, call, Instagram and website enquiry lands here with a score. Move it along and record the order value when it is won.'),
+    h('div',{class:'grid',style:'grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start'},stages.map(s=>{const ls=L.filter(l=>l.stage===s);
+      return h('div',{class:'card',style:'background:var(--soft)'},h('header',{},pill(s),h('small',{class:'num'},ls.length+(s==='won'?' · '+inr(ls.reduce((a,l)=>a+(l.value||0),0)):''))),ls.length?ls.map(card):h('p',{class:'muted'},'None'))})))}
+
+function vSite(){const hist=[...DATA.site.history].sort((a,b)=>a.ts-b.ts),last=hist[hist.length-1]||{};
+  const ok=hist.filter(r=>r.ok);const pts=hist.map(r=>({x:new Date(r.ts*1000).toTimeString().slice(0,5),full:new Date(r.ts*1000).toLocaleString('en-IN'),y:r.ok?r.ms:0}));
+  const marks=hist.map((r,i)=>r.ok?-1:i).filter(i=>i>=0);
+  return h('div',{},h('h2',{},'Site health'),h('p',{class:'sub'},'thecentury.in is checked every 15 minutes: reachability, response time and SSL expiry.'),
+    h('div',{class:'grid g-kpi'},kpi(last.ok?'Up':'Down','Right now',last.status?('HTTP '+last.status):last.error),kpi((DATA.site.uptime_pct??'—')+'%','Uptime, recent checks'),kpi(ok.length?Math.round(ok.reduce((a,r)=>a+r.ms,0)/ok.length)+' ms':'—','Average response'),kpi(last.ssl_days!=null?last.ssl_days+' days':'—','SSL certificate left')),
+    chartCard('Response time','Red rings mark failed checks',host=>lineChart(host,pts,{name:'Response',fmt:v=>nf(v)+' ms',noArea:false,marks,label:'Response time',h:240})),
+    h('p',{},h('button',{class:'btn pri',disabled:ME.role==='viewer',on:{click:doSite}},'Check now')))}
+
+function vRoi(){const r=DATA.roi,g=DATA.gr.posts;
+  return h('div',{},h('h2',{},'ROI & growth'),h('p',{class:'sub'},'Hours the automation gave back, what that time costs, and which posts earn saves and shares.'),
+    h('div',{class:'grid g-kpi'},kpi(r.hours_saved.toFixed(1)+' h','Hours saved'),kpi(inr(r.money_saved_inr),'Staff time saved','at '+inr(r.assumptions.hourly_cost_inr)+' per hour'),kpi(inr(r.won_value_inr),'Won lead value',r.won+' leads won'),kpi(r.conversion_pct+'%','Lead to won'),kpi(inr(r.pipeline_inr),'Open pipeline')),
+    h('div',{class:'grid g-2'},
+      chartCard('Saves + shares per 1,000 reach','Boost only the top 20%',host=>hbars(host,g.map(p=>({t:p.title,v:p.saves_shares_per_1k||0,c:heroCol(p.hero),label:String(p.saves_shares_per_1k||0),tip:`Reach ${nf(p.reach)} · Saves ${nf(p.saves)} · Shares ${nf(p.shares)}`})))),
+      chartCard('Hours saved by automation','',host=>hbars(host,r.breakdown.map(b=>({t:b.kind.replace(/_/g,' '),v:b.hours,label:b.hours.toFixed(1)+' h',tip:b.count+' actions'})).sort((a,b)=>b.v-a.v)))),
+    h('div',{class:'card'},h('header',{},h('h3',{},'How this is calculated')),h('p',{class:'sub',style:'margin:0'},`Hours saved = automated actions × minutes each ÷ 60. Money saved = hours × ₹${r.assumptions.hourly_cost_inr} per hour. ${r.assumptions.note||''} Change the minutes and hourly cost in the environment settings.`)))}
+
+const VIEWS={ov:vOverview,cal:vCalendar,ap:vContent,in:vInbox,ld:vLeads,st:vSite,roi:vRoi};
+function render(){redraws.length=0;hideTip();const y=scrollY;
+  $app.replaceChildren(frame(VIEWS[tab]()));
+  if(!redraws._ro){redraws._ro=new ResizeObserver(()=>{redraws.forEach(f=>f())});redraws._ro.observe(document.body)}
+  scrollTo(0,y)}
+async function refresh(){DATA=await loadLive();render()}
+
+function loginView(msg){const t=h('input',{type:'password',id:'tk','aria-label':'Team token',autocomplete:'current-password',on:{keydown:e=>{if(e.key==='Enter')go()}}});
+  const go=async()=>{TOKEN=t.value.trim();try{DATA=await loadLive();MODE='live';try{sessionStorage.setItem('ctok',TOKEN)}catch(e){}render()}catch(e){loginView('That token was not accepted.')}};
+  $app.replaceChildren(h('header',{class:'top'},h('div',{class:'logo'},'Cent',h('u',{},'ur'),'y',h('sup',{},'®'))),
+    h('div',{class:'card login'},h('h2',{},'Sign in'),h('p',{class:'sub'},'Use the personal token your admin gave you.'),h('label',{class:'l',for:'tk'},'Team token'),t,msg?h('p',{class:'err'},msg):'',h('p',{},h('button',{class:'btn pri',on:{click:go}},'Continue'))));t.focus()}
+
 async function boot(){
- const L=document.getElementById('login'),N=document.getElementById('nav'),M=document.getElementById('main');
- if(!T){L.hidden=false;N.hidden=M.hidden=true;return}
- try{me=await api('/api/me')}catch(e){return}
- L.hidden=true;N.hidden=M.hidden=false;
- document.getElementById('who').textContent=me.name+' · '+me.role;
- N.replaceChildren(...TABS.map((t,i)=>$('button',{class:i===tab?'on':'',on:{click:()=>{tab=i;boot()}}},t)),$('button',{on:{click:logout}},'Sign out'));
- const v=[overview,content,inbox,leads,calls,site,roi][tab];
- M.replaceChildren(await v())}
-async function overview(){const o=await api('/api/overview'),r=o.roi,p=o.posts_by_status;
- return $('div',{},
-  o.md_note?$('div',{class:'card warn'},o.md_note):'',
-  $('div',{class:'grid'},kpi(r.hours_saved+' h','Hours saved (30d)'),kpi(inr(r.money_saved_inr),'Value of time saved'),kpi(r.leads,'Leads (30d)'),kpi(r.won+' / '+inr(r.won_value_inr),'Won · value'),kpi(o.sla_breaches,'Reply SLA breaches'),kpi(o.open_leads,'Open leads')),
-  $('div',{class:'row'},
-   $('div',{class:'card'},$('h4',{},'Content pipeline'),table(['Status','Posts'],Object.entries(p),([s,n])=>[tag(s),n])),
-   $('div',{class:'card'},$('h4',{},'System'),$('p',{},'Sales open: '+(o.sales_open?'yes':'no — no Buy/Order CTAs allowed')),
-    $('p',{},'Meta: '+(o.live.meta?'live':'dry-run')+' · Sarvam: '+(o.live.sarvam?'live':'dry-run')+' · WhatsApp: '+(o.live.whatsapp?'live':'dry-run')))))}
-async function content(){const ps=await api('/api/posts');
- const f={},fld=(k,l,el)=>{f[k]=el;return $('div',{},$('label',{},l),el)};
- const form=$('div',{class:'card'},$('h4',{},'New post (auto-checked against brand rules)'),
-  fld('title','Title',$('input')),
-  $('div',{class:'row'},fld('hero','Product',$('select',{},['jaggery','soya','makhana','seasoning','poha','besan','pulses','brand'].map(x=>$('option',{},x)))),
-   fld('format','Format',$('select',{},['reel','carousel','static','story'].map(x=>$('option',{},x))))),
-  fld('caption','Caption',$('textarea')),fld('cta','CTA',$('input')),fld('hashtags','Hashtags',$('input',{value:'#Century #PureHomeFood #CenturySince1980'})),
-  $('label',{},$('input',{type:'checkbox',id:'paid',style:'width:auto'}),' Paid boost  '),$('label',{},$('input',{type:'checkbox',id:'creator',style:'width:auto'}),' Creator/gifted post'),
-  $('p',{},$('button',{class:'b',on:{click:async()=>{try{const hero=f.hero.value;const r=await api('/api/posts',{method:'POST',body:{title:f.title.value,hero,bucket:hero==='brand'?'brand':'product',format:f.format.value,caption:f.caption.value,cta:f.cta.value,hashtags:f.hashtags.value,is_paid:document.getElementById('paid').checked,is_creator:document.getElementById('creator').checked}});alert('Status: '+r.status+'\n'+[...r.check.errors,...r.check.warnings].join('\n'));boot()}catch(e){alert(e.message)}}}},'Check & submit')));
- const act=(p,d)=>$('button',{class:'s',on:{click:async()=>{try{const r=await api(`/api/posts/${p.id}/review`,{method:'POST',body:{decision:d,note:d==='reject'?prompt('Reason?')||'':''}});if(r.warning)alert(r.warning);boot()}catch(e){alert(e.message)}}}},d);
- const sched=p=>$('button',{class:'s',on:{click:async()=>{const s=prompt('Publish at (YYYY-MM-DD HH:MM, local time)');if(!s)return;try{await api(`/api/posts/${p.id}/schedule`,{method:'POST',body:{when:new Date(s.replace(' ','T')).getTime()/1000}});boot()}catch(e){alert(e.message)}}}},'schedule');
- return $('div',{},form,$('div',{class:'card'},$('h4',{},'Posts & approvals'),table(['#','Post','Status','Issues','Actions'],ps,p=>{const c=JSON.parse(p.flags||'{}');
-  return[p.id,[$('b',{},p.title||p.hero),$('div',{},(p.caption||'').slice(0,120))],tag(p.status),[...(c.errors||[]).map(e=>$('div',{class:'err'},e)),...(c.warnings||[]).map(e=>$('div',{class:'warn'},e))],
-   [p.status==='needs_qa'&&['qa','md'].includes(me.role)||p.status==='needs_md'&&me.role==='md'?act(p,'approve'):'',['needs_qa','needs_md','draft'].includes(p.status)?act(p,'reject'):'',p.status==='approved'?sched(p):'']]})))}
-async function inbox(){const j=await api('/api/messages');
- return $('div',{},j.sla_breaches.length?$('div',{class:'card err'},'SLA breaches: '+j.sla_breaches.map(m=>`#${m.id} (${m.overdue_h}h overdue)`).join(', ')):'',
-  $('div',{class:'card'},table(['When','Channel','From','Message','Category','Status','Reply'],j.messages,m=>[when(m.ts),m.channel,m.sender,m.body,m.category,tag(m.status),m.reply||(m.status.startsWith('escalated')||m.status==='needs_human'?$('button',{class:'s',on:{click:async()=>{const r=prompt('Your reply');if(r!=null){await api(`/api/messages/${m.id}/resolve?reply=`+encodeURIComponent(r),{method:'POST'});boot()}}}},'reply/resolve'):'')])))}
-async function leads(){const j=await api('/api/leads');
- const mv=l=>$('select',{on:{change:async e=>{const v=e.target.value==='won'?parseFloat(prompt('Order value ₹')||'0'):null;await api(`/api/leads/${l.id}/move`,{method:'POST',body:{stage:e.target.value,value:v}});boot()}}},j.stages.map(s=>$('option',{selected:s===l.stage,value:s},s)));
- return $('div',{class:'card'},table(['Score','Name','Phone','Source','Interest','Stage','Value'],j.leads,l=>[l.score,l.name,l.phone,l.source,l.interest,mv(l),inr(l.value)]))}
-async function calls(){const c=await api('/api/calls');return $('div',{class:'card'},$('p',{},'Calls handled by Sarvam voice AI; sensitive topics are escalated to a human.'),table(['When','Caller','Heard','Answered','Handled by'],c,x=>[when(x.ts),x.caller,x.transcript,x.answer,tag(x.handled_by)]))}
-async function site(){const s=await api('/api/site');
- return $('div',{},$('p',{},$('button',{class:'b',on:{click:async()=>{await api('/api/site/check',{method:'POST'});boot()}}},'Check now')),
-  $('div',{class:'grid'},kpi(s.uptime_pct==null?'—':s.uptime_pct+'%','Uptime (recent checks)'),kpi(s.latest[0]?s.latest[0].ms+' ms':'—','Latest response'),kpi(s.latest[0]&&s.latest[0].ssl_days!=null?s.latest[0].ssl_days+' d':'—','SSL days left')),
-  $('div',{class:'card'},table(['When','URL','OK','Status','ms','Error'],s.history.slice(0,30),r=>[when(r.ts),r.url,r.ok?'✔':'✘',r.status,r.ms,r.error])))}
-async function roi(){const [r,g]=await Promise.all([api('/api/roi'),api('/api/growth')]);
- return $('div',{},$('div',{class:'grid'},kpi(r.hours_saved+' h','Hours saved'),kpi(inr(r.money_saved_inr),'Money saved'),kpi(inr(r.won_value_inr),'Won lead value'),kpi(r.conversion_pct+'%','Lead → won'),kpi(inr(r.pipeline_inr),'Open pipeline')),
-  $('div',{class:'card'},$('h4',{},'Where the hours came from'),table(['Automation','Count','Hours'],r.breakdown,b=>[b.kind,b.count,b.hours]),
-   $('p',{class:'warn'},`Assumes ₹${r.assumptions.hourly_cost_inr}/h. ${r.assumptions.note}`)),
-  $('div',{class:'card'},$('h4',{},'Content performance (saves+shares per 1,000 reach)'),
-   table(['Post','Product','Reach','Saves','Shares','Link/WA clicks','S+S /1k'],g.posts,p=>[p.title,p.hero,p.reach,p.saves,p.shares,(p.link_clicks||0)+' / '+(p.wa_clicks||0),p.saves_shares_per_1k]),
-   $('p',{},'Boost only the top 20%: '+(g.boost_candidates.map(p=>p.title).join(', ')||'—'))))}
+  try{await api('/api/me');DATA=await loadLive();MODE='live';render();return}
+  catch(e){if(e.message==='401'){loginView(TOKEN?'That token was not accepted.':'');return}}
+  MODE='sample';ME={name:'Rahul Arora',role:'md'};DATA=sample();render()}
 boot();
-</script></body></html>
+</script>
