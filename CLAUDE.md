@@ -25,10 +25,14 @@ Config via env only; deploy with the Dockerfile; DB path is configurable (mount 
 ## Standing notes from the owner (session memory)
 - This is a **cloud-shared project with the owner's team** — build and run everything for multi-user use: named logins and
   roles, audit trail, env-only secrets, shared persistent DB, no single-user/local-only assumptions. Never ship `DEV_MODE`.
-- The owner viewed the dashboard in the Artifacts panel and was unhappy with how it looks (message was cut off at
-  "looks more like a…"; likely reads as a basic admin table, not a designed marketing dashboard). UI redesign is
-  pending: charts/KPI cards, content calendar with approval badges, chat-style inbox, shareable preview. Ask what
-  they want before redoing it. The Artifacts view is a static preview with no backend, so it needs demo data.
+- Dashboard UI (app/static/index.html) was redesigned twice at the owner's request: first charts + content calendar, then a
+  "more premium, in the brand's style" pass. Direction: quietly premium (Brand Bible 4.x / Handbook voice): deep Century Green
+  header, Century Yellow used only as the underline motif (animated under each page title, under the active nav label) and tiny
+  highlights; Poppins only (brand fallback; swap in the pack headline font when the design agency supplies it); light weights,
+  uppercase tracked micro-labels, hairline borders, generous spacing, no loud pills, sign-off "Pure home food. Nothing less." in
+  the footer. The owner's note said "style 4" and it was unclear what the 4 meant — confirm if it matters.
+- The same file is published as a static Artifact preview with sample data (no backend); it falls back to sample mode when
+  `/api/me` is unreachable. Keep it a fragment (no doctype): `app/main.py` adds the document shell when serving.
 
 ## Source-of-truth order
 Pack artwork (names/claims) → `docs/brand/Brand_Bible.md` (everything else) → `docs/brand/Meta_Digital_Brand_Handbook.md`
